@@ -57,6 +57,7 @@
         }
         input:focus, select:focus { border-color: var(--primary-color); background-color: white; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); outline: none; }
         input[type="color"] { padding: 4px; height: 42px; }
+        input[type="checkbox"] { width: auto; }
         
         .section-card { background: var(--card-bg); padding: 25px; border-radius: var(--radius-lg); box-shadow: var(--shadow); margin-bottom: 30px; }
         .loader { border: 4px solid #e2e8f0; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: none; margin: 0 auto; }
@@ -129,6 +130,19 @@
             body, .app-container, .preview-panel { display: block !important; width: 100% !important; height: auto !important; overflow: visible !important; background: #fff !important; padding: 0 !important; margin: 0 !important; }
             #a4-sheet { transform: none !important; box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; height: 100% !important; display: grid !important; }
             .price-label { page-break-inside: avoid !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; border-color: #000 !important; }
+        
+            /* <!-- ADDED --> New rules for pre-printed mode */
+            body.pre-printed-mode .price-label {
+                border: none !important;
+                background: transparent !important;
+            }
+            body.pre-printed-mode .label-logo-area {
+                visibility: hidden !important;
+            }
+            body.pre-printed-mode .label-price-container {
+                border: none !important;
+                background: transparent !important;
+            }
         }
     </style>
 </head>
@@ -164,6 +178,17 @@
                     <button id="generate-btn">إنشاء وتحديث المعاينة</button>
                  </div>
             </section>
+
+            <!-- ADDED: Print Settings Section -->
+            <fieldset>
+                <legend>إعدادات الطباعة</legend>
+                <div class="control-group">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: normal; color: var(--text-color);">
+                        <input type="checkbox" id="pre-printed-mode-checkbox" style="margin-left: 5px; transform: scale(1.1);">
+                        <span>الطباعة على نموذج مُعد مسبقاً<br><small style="color: var(--muted-text); font-weight: 400;">(إخفاء الشعار والإطارات عند الطباعة)</small></span>
+                    </label>
+                </div>
+            </fieldset>
 
             <h3>تخصيص التصميم</h3>
             <fieldset>
@@ -233,6 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
         priceInput: document.getElementById('price-input'), generateBtn: document.getElementById('generate-btn'),
         a4Sheet: document.getElementById('a4-sheet'), printButton: document.getElementById('print-button'),
         layoutStatus: document.getElementById('layout-calculation-status'),
+        prePrintedModeCheckbox: document.getElementById('pre-printed-mode-checkbox'), // ADDED
         controls: {}
     };
 
@@ -387,10 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedItems.length === 1) {
                 newName = selectedItems[0].name;
             } else {
-                // --- CORRECTED NAME GENERATION LOGIC ---
                 const allNames = selectedItems.map(item => item.name);
-                
-                // 1. Find the common unit among all items
                 let commonUnit = '';
                 const allUnits = allNames.map(name => extractUnit(name)).filter(Boolean);
                 if (allUnits.length > 0) {
@@ -403,15 +426,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
 
-                // 2. Remove the unit from each name to find the common text
                 const namesWithoutUnits = allNames.map(name => name.replace(extractUnit(name) || '', '').trim());
-                
-                // 3. Find the common starting text
                 const commonStart = findCommon(namesWithoutUnits);
-
-                // 4. Build the new name
-                const nameParts = [commonStart, "أنواع", commonUnit].filter(Boolean); // filter(Boolean) removes empty strings
-                newName = nameParts.join(' ').replace(/\s+/g, ' '); // Join and clean up extra spaces
+                const nameParts = [commonStart, "أنواع", commonUnit].filter(Boolean);
+                newName = nameParts.join(' ').replace(/\s+/g, ' ');
             }
             
             state.currentPreviewData = { name: newName, price };
@@ -478,6 +496,11 @@ document.addEventListener('DOMContentLoaded', function() {
             valueSpan.textContent = input.value;
             input.addEventListener('input', e => valueSpan.textContent = e.target.value);
         }
+    });
+
+    // ADDED: Event listener for the new checkbox
+    dom.prePrintedModeCheckbox.addEventListener('change', (e) => {
+        document.body.classList.toggle('pre-printed-mode', e.target.checked);
     });
     
     loadData();
