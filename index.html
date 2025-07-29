@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Database Search</title>
+    <title>Product Database Search (Direct Load)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
 
@@ -220,48 +220,33 @@ document.addEventListener('DOMContentLoaded', function() {
             renderItems(state.allItems);
         } else {
             showStatus('Connected successfully, but no data was found.', 'error');
+            dom.itemList.innerHTML = `<p class="empty-message">No data found in the database.</p>`;
         }
     };
 
+    // --- UPDATED: Original, Direct Data Loading Method ---
     const loadData = async () => {
         dom.loader.style.display = 'block';
         dom.searchTool.style.display = 'none';
 
-        let cachedDataJson = null;
-        try { cachedDataJson = localStorage.getItem('shelfPriceData'); } 
-        catch (e) { console.warn("Could not read from localStorage:", e); }
-        
-        if (cachedDataJson) {
-            console.log("Loading data from cache...");
-            processData(JSON.parse(cachedDataJson));
-        }
-
         try {
-            console.log("Fetching fresh data in the background...");
             const response = await fetch(WEB_APP_URL);
-            if (!response.ok) throw new Error(`Network response was not ok (Status: ${response.status})`);
-            const data = await response.json();
-            if (data.error) throw new Error(data.message);
-            
-            try {
-                localStorage.setItem('shelfPriceData', JSON.stringify(data));
-                console.log("Fresh data fetched and cached successfully.");
-            } catch (e) {
-                console.warn("Could not cache data (likely too large):", e.name);
-                if(e.name === 'QuotaExceededError') {
-                     localStorage.removeItem('shelfPriceData');
-                }
+            if (!response.ok) {
+                throw new Error(`Network response was not ok (Status: ${response.status})`);
             }
 
-            if (!cachedDataJson) {
-                processData(data);
-                showStatus(`Successfully loaded ${state.allItems.length} items.`, 'success');
+            const data = await response.json();
+            if (data.error) {
+                throw new Error(data.message);
             }
+
+            processData(data);
+            showStatus(`Successfully loaded ${state.allItems.length} items.`, 'success');
+
         } catch (error) {
-            if (!cachedDataJson) {
-                showStatus(`Failed to load data: ${error.message}`, 'error');
-            }
+            showStatus(`Failed to load data: ${error.message}`, 'error');
             console.error("Fetch error:", error);
+            dom.itemList.innerHTML = `<p class="empty-message">Error loading data. Please check your connection and try again.</p>`;
         } finally {
             dom.loader.style.display = 'none';
             dom.searchTool.style.display = 'block';
